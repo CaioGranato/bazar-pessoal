@@ -16,6 +16,7 @@ export interface Item {
 export interface Settings {
   siteTitle: string;
   siteSubtitle: string;
+  contactUrl: string;
 }
 
 export type Category = 'Eletrônicos' | 'Informática' | 'Câmeras' | 'Outros';
