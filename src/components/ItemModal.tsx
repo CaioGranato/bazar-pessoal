@@ -1,16 +1,16 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Item } from '../types';
 
 interface ItemModalProps {
   item: Item | null;
   onClose: () => void;
+  contactUrl?: string;
 }
 
-export function ItemModal({ item, onClose }: ItemModalProps) {
+export function ItemModal({ item, onClose, contactUrl }: ItemModalProps) {
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
-  const [isExpanded, setIsExpanded] = useState(false);
 
   if (!item) return null;
 
@@ -41,7 +41,16 @@ export function ItemModal({ item, onClose }: ItemModalProps) {
                 className="w-full h-full object-contain"
                 referrerPolicy="no-referrer"
               />
-              
+
+              {/* VENDIDO stamp overlay on photo */}
+              {item.isSold && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="border-4 border-red-600 text-red-600 font-black text-4xl px-6 py-3 rotate-[-45deg] uppercase tracking-widest bg-white/80 backdrop-blur-sm rounded-lg shadow-lg">
+                    Vendido
+                  </div>
+                </div>
+              )}
+
               {allPhotos.length > 1 && (
                 <>
                   <button
@@ -78,7 +87,7 @@ export function ItemModal({ item, onClose }: ItemModalProps) {
           </div>
 
           {/* Info Section */}
-          <div className="w.full md:w-1/2 p-6 md:p-10 flex flex-col overflow-y-auto">
+          <div className="w-full md:w-1/2 p-6 md:p-10 flex flex-col overflow-y-auto">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <span className="text-xs font-bold uppercase tracking-widest text-stone-400 mb-2 block">
@@ -116,11 +125,23 @@ export function ItemModal({ item, onClose }: ItemModalProps) {
                 Este item já foi vendido
               </div>
             )}
-            
-            <div className="mt-10 pt-6 border-t border-stone-100">
-              <p className="text-sm text-stone-400 italic">
-                Interessado? Entre em contato diretamente.
-              </p>
+
+            <div className="mt-6 pt-6 border-t border-stone-100">
+              {contactUrl ? (
+                <a
+                  href={contactUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full bg-brand-gradient text-white px-6 py-3 rounded-full hover:opacity-90 transition-opacity font-medium"
+                >
+                  <MessageCircle size={20} />
+                  Entrar em contato
+                </a>
+              ) : (
+                <p className="text-sm text-stone-400 italic text-center">
+                  Interessado? Entre em contato diretamente.
+                </p>
+              )}
             </div>
           </div>
         </motion.div>
