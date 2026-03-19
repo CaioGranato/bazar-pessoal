@@ -31,7 +31,7 @@ export function ItemCard({ item, onClick }: ItemCardProps) {
         
         {item.isSold && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="border-4 border-red-600 text-red-600 font-black text-3xl px-4 py-2 rotate-[-15deg] uppercase tracking-widest bg-white/80 backdrop-blur-sm rounded-lg shadow-lg">
+            <div className="border-4 border-red-600 text-red-600 font-black text-3xl px-4 py-2 rotate-[-45deg] uppercase tracking-widest bg-white/80 backdrop-blur-sm rounded-lg shadow-lg">
               Vendido
             </div>
           </div>
