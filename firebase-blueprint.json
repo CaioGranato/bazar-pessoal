@@ -1,0 +1,75 @@
+{
+  "entities": {
+    "Settings": {
+      "title": "Settings",
+      "description": "Global site settings.",
+      "type": "object",
+      "properties": {
+        "siteTitle": {
+          "type": "string",
+          "description": "The main title of the site."
+        },
+        "siteSubtitle": {
+          "type": "string",
+          "description": "The subtitle of the site."
+        }
+      },
+      "required": ["siteTitle", "siteSubtitle"]
+    },
+    "Item": {
+      "title": "Item",
+      "description": "An item for sale in the personal bazaar.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The title of the item."
+        },
+        "description": {
+          "type": "string",
+          "description": "The full description of the item."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the item (e.g., Electronics, IT, Cameras)."
+        },
+        "price": {
+          "type": "number",
+          "description": "The price of the item."
+        },
+        "mainPhoto": {
+          "type": "string",
+          "description": "The URL of the main photo."
+        },
+        "additionalPhotos": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "A list of additional photo URLs."
+        },
+        "isSold": {
+          "type": "boolean",
+          "description": "Whether the item has been sold."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the item was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the item was last updated."
+        }
+      },
+      "required": ["title", "description", "category", "mainPhoto", "isSold"]
+    }
+  },
+  "firestore": {
+    "items": {
+      "schema": "Item",
+      "description": "A collection of items for sale."
+    }
+  }
+}
