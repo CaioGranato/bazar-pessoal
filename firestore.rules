@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: items
+    // Document ID: auto-generated
+    // Fields:
+    //   - title: string (required)
+    //   - description: string (required)
+    //   - category: string (required)
+    //   - price: number (optional)
+    //   - mainPhoto: string (required, URL)
+    //   - additionalPhotos: list of strings (optional, URLs)
+    //   - isSold: boolean (required)
+    //   - createdAt: timestamp (required)
+    //   - updatedAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "contato.orlandodicas@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidItem(data) {
+      return data.keys().hasAll(['title', 'description', 'category', 'mainPhoto', 'isSold', 'createdAt', 'updatedAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.description is string && data.description.size() > 0 && data.description.size() < 5000 &&
+             data.category is string && data.category.size() > 0 && data.category.size() < 50 &&
+             data.mainPhoto is string && (data.mainPhoto.matches("^https://.*") || data.mainPhoto.matches("^http://.*")) &&
+             data.isSold is bool &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    match /items/{itemId} {
+      allow read: if true; // Anyone can view items
+      allow create: if isAdmin() && isValidItem(request.resource.data);
+      allow update: if isAdmin() && isValidItem(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /settings/global {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /items/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && 
+        (request.auth.token.email == "contato.orlandodicas@gmail.com" && request.auth.token.email_verified == true);
+    }
+  }
+}
