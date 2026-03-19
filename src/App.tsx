@@ -13,7 +13,7 @@ export default function App() {
   const [items, setItems] = useState<Item[]>([]);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [settings, setSettings] = useState<Settings>({ siteTitle: 'Bazar Pessoal', siteSubtitle: 'Curadoria de Itens' });
+  const [settings, setSettings] = useState<Settings>({ siteTitle: 'Bazar Pessoal', siteSubtitle: 'Curadoria de Itens', contactUrl: '' });
 
   // Path-based routing (compatible with GitHub Pages subdir)
   const isAdminPath = () => window.location.pathname.endsWith('/admin') || window.location.pathname.endsWith('/admin/');
@@ -178,7 +178,7 @@ export default function App() {
             © 2026 {settings.siteTitle}. Todos os itens são de uso pessoal e vendidos no estado.
           </p>
           <div className="flex gap-8">
-            <a href="#" className="text-stone-400 hover:text-brand-start text-sm font-bold uppercase tracking-widest transition-colors">Contato</a>
+            <a href={settings.contactUrl || '#'} target="_blank" rel="noopener noreferrer" className="text-stone-400 hover:text-brand-start text-sm font-bold uppercase tracking-widest transition-colors">Contato</a>
           </div>
         </div>
       </footer>
@@ -186,6 +186,7 @@ export default function App() {
       <ItemModal
         item={selectedItem}
         onClose={() => setSelectedItem(null)}
+        contactUrl={settings.contactUrl}
       />
     </div>
   );
