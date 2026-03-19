@@ -16,7 +16,7 @@ export function AdminPanel() {
   const [isUploading, setIsUploading] = useState(false);
   
   // Settings state
-  const [settings, setSettings] = useState<Settings>({ siteTitle: 'Bazar Pessoal', siteSubtitle: 'Curadoria de Itens' });
+  const [settings, setSettings] = useState<Settings>({ siteTitle: 'Bazar Pessoal', siteSubtitle: 'Curadoria de Itens', contactUrl: '' });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -285,7 +285,7 @@ export function AdminPanel() {
             className="flex items-center gap-2 bg-brand-gradient text-white px-5 py-2 rounded-full hover:opacity-90 transition-opacity font-medium disabled:opacity-50"
           >
             {isSavingSettings ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-            Salvar Textos
+            Salvar Configurações
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -305,6 +305,16 @@ export function AdminPanel() {
               className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none transition-all"
             />
           </div>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-bold uppercase tracking-wider text-stone-500">URL de Contato</label>
+          <p className="text-xs text-stone-400">Esta URL será usada no botão "Entrar em contato" de cada item e no link de Contato do rodapé.</p>
+          <input
+            value={settings.contactUrl}
+            onChange={(e) => setSettings({ ...settings, contactUrl: e.target.value })}
+            className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none transition-all"
+            placeholder="https://wa.me/55119... ou mailto:seu@email.com"
+          />
         </div>
       </section>
 
@@ -352,14 +362,17 @@ export function AdminPanel() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold uppercase tracking-wider text-stone-500">Preço (Opcional)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none transition-all"
-                placeholder="0.00"
-              />
+              <div className="flex items-center border border-stone-200 rounded-xl focus-within:ring-2 focus-within:ring-brand-start transition-all overflow-hidden">
+                <span className="px-3 py-3 bg-stone-50 text-stone-500 font-bold border-r border-stone-200 select-none">R$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  className="flex-1 px-4 py-3 outline-none bg-white"
+                  placeholder="0,00"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold uppercase tracking-wider text-stone-500">Foto Principal</label>
