@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, db, storage } from '../firebase';
-import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { collection, addDoc, updateDoc, doc, deleteDoc, serverTimestamp, query, orderBy, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { LogIn, LogOut, Plus, Trash2, Edit2, CheckCircle, XCircle, Upload, Image as ImageIcon, Loader2, Save, ExternalLink, AlertCircle } from 'lucide-react';
@@ -9,7 +8,10 @@ import { Item, CATEGORIES, Category, Settings } from '../types';
 import { cn } from '../utils';
 
 export function AdminPanel() {
-  const [user, setUser] = useState<User | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginUser, setLoginUser] = useState('');
+  const [loginPass, setLoginPass] = useState('');
+  const [loginError, setLoginError] = useState('');
   const [items, setItems] = useState<Item[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
@@ -49,12 +51,7 @@ export function AdminPanel() {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
+    if (!isLoggedIn) return;
     
     // Fetch items
     const q = query(collection(db, 'items'), orderBy('createdAt', 'desc'));
@@ -77,12 +74,12 @@ export function AdminPanel() {
 
   const isAdmin = user?.email === 'contato.orlandodicas@gmail.com';
 
-  const handleLogin = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error('Login failed', error);
+  const handleLogin = () => {
+    if (loginUser === 'caiogranatoodmax' && loginPass === 'odmax2026') {
+      setIsLoggedIn(true);
+      setLoginError('');
+    } else {
+      setLoginError('Login ou senha incorretos.');
     }
   };
 
@@ -213,32 +210,47 @@ export function AdminPanel() {
     setIsAdding(false);
   };
 
-  if (!user) {
+  if (!isLoggedIn) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 bg-stone-50 rounded-3xl border border-stone-200">
-        <h2 className="text-2xl font-bold text-brand-gradient inline-block mb-4">Área Administrativa</h2>
-        <p className="text-stone-500 mb-8 text-center max-w-xs">
-          Faça login para gerenciar seus anúncios.
-        </p>
-        <button
-          onClick={handleLogin}
-          className="flex items-center gap-2 bg-brand-gradient text-white px-6 py-3 rounded-full hover:opacity-90 transition-opacity font-medium"
-        >
-          <LogIn size={20} />
-          Entrar com Google
-        </button>
+      <div className="min-h-screen flex items-center justify-center bg-[#FDFCFB]">
+        <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-10 w-full max-w-sm text-center space-y-6">
+          <h2 className="text-2xl font-bold text-brand-start">Área Administrativa</h2>
+          <p className="text-stone-400 text-sm">Entre com suas credenciais para continuar.</p>
+          <div className="space-y-3 text-left">
+            <div>
+              <label className="text-xs font-medium text-stone-500 uppercase tracking-wide">Login</label>
+              <input
+                type="text"
+                value={loginUser}
+                onChange={(e) => setLoginUser(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
+                className="mt-1 w-full px-4 py-2 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none text-sm"
+                autoComplete="username"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-stone-500 uppercase tracking-wide">Senha</label>
+              <input
+                type="password"
+                value={loginPass}
+                onChange={(e) => setLoginPass(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
+                className="mt-1 w-full px-4 py-2 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none text-sm"
+                autoComplete="current-password"
+              />
+            </div>
+            {loginError && <p className="text-red-500 text-xs text-center">{loginError}</p>}
+          </div>
+          <button
+            onClick={handleLogin}
+            className="w-full py-3 rounded-xl bg-brand-start text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+          >
+            Entrar
+          </button>
+        </div>
       </div>
     );
   }
-
-  if (!isAdmin) {
-    return (
-      <div className="p-12 text-center bg-red-50 rounded-3xl border border-red-100">
-        <h2 className="text-2xl font-bold text-red-900 mb-2">Acesso Negado</h2>
-        <p className="text-red-600 mb-6">Você não tem permissão para acessar esta área.</p>
-        <button onClick={() => signOut(auth)} className="text-stone-500 underline">Sair</button>
-      </div>
-    );
   }
 
   return (
@@ -345,7 +357,7 @@ export function AdminPanel() {
             {isAdding ? 'Cancelar' : 'Novo Item'}
           </button>
           <button
-            onClick={() => signOut(auth)}
+            onClick={() => setIsLoggedIn(false)}
             className="p-2.5 text-stone-400 hover:text-brand-start transition-colors"
           >
             <LogOut size={24} />
