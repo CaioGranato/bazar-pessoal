@@ -28,9 +28,25 @@ export function AdminPanel() {
   const [price, setPrice] = useState('');
   const [mainPhoto, setMainPhoto] = useState('');
   const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
+  const [additionalPhotoUrl, setAdditionalPhotoUrl] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const additionalFilesRef = useRef<HTMLInputElement>(null);
+
+  // Converte links do Google Drive para link direto
+  const convertDriveUrl = (url: string): string => {
+    const m1 = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/);
+    if (m1) return `https://drive.google.com/uc?export=view&id=${m1[1]}`;
+    const m2 = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
+    if (m2) return `https://drive.google.com/uc?export=view&id=${m2[1]}`;
+    return url;
+  };
+
+  const addAdditionalPhotoUrl = () => {
+    if (!additionalPhotoUrl.trim()) return;
+    setAdditionalPhotos(prev => [...prev, convertDriveUrl(additionalPhotoUrl.trim())]);
+    setAdditionalPhotoUrl('');
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
@@ -380,9 +396,9 @@ export function AdminPanel() {
                 <input
                   required
                   value={mainPhoto}
-                  onChange={(e) => setMainPhoto(e.target.value)}
+                  onChange={(e) => setMainPhoto(convertDriveUrl(e.target.value))}
                   className="flex-1 px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none transition-all"
-                  placeholder="URL da foto ou faça upload"
+                  placeholder="URL ou link do Google Drive"
                 />
                 <button
                   type="button"
@@ -447,6 +463,23 @@ export function AdminPanel() {
                 accept="image/*"
                 onChange={(e) => handleFileUpload(e, false)}
               />
+            </div>
+            <div className="flex gap-2 mt-1">
+              <input
+                type="text"
+                value={additionalPhotoUrl}
+                onChange={(e) => setAdditionalPhotoUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addAdditionalPhotoUrl(); } }}
+                placeholder="Adicionar foto via URL ou link do Google Drive..."
+                className="flex-1 px-4 py-2 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none transition-all text-sm"
+              />
+              <button
+                type="button"
+                onClick={addAdditionalPhotoUrl}
+                className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 text-sm font-medium transition-colors whitespace-nowrap"
+              >
+                + Adicionar
+              </button>
             </div>
           </div>
 
