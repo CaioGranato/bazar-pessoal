@@ -70,9 +70,9 @@ export function AdminPanel() {
     fetchSettings();
 
     return () => unsubscribeItems();
-  }, [user]);
+  }, [isLoggedIn]);
 
-  const isAdmin = user?.email === 'contato.orlandodicas@gmail.com';
+  const isAdmin = isLoggedIn;
 
   const handleLogin = () => {
     if (loginUser === 'caiogranatoodmax' && loginPass === 'odmax2026') {
@@ -250,7 +250,6 @@ export function AdminPanel() {
         </div>
       </div>
     );
-  }
   }
 
   return (
