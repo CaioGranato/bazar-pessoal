@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, db, storage } from '../firebase';
+import { signInAnonymously, signOut } from 'firebase/auth';
 import { collection, addDoc, updateDoc, doc, deleteDoc, serverTimestamp, query, orderBy, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { LogIn, LogOut, Plus, Trash2, Edit2, CheckCircle, XCircle, Upload, Image as ImageIcon, Loader2, Save, ExternalLink, AlertCircle } from 'lucide-react';
@@ -78,6 +79,7 @@ export function AdminPanel() {
     if (loginUser === 'caiogranatoodmax' && loginPass === 'odmax2026') {
       setIsLoggedIn(true);
       setLoginError('');
+      signInAnonymously(auth).catch(console.error);
     } else {
       setLoginError('Login ou senha incorretos.');
     }
@@ -161,6 +163,7 @@ export function AdminPanel() {
       resetForm();
     } catch (error) {
       console.error('Save failed', error);
+    showStatus('Erro ao salvar item.', 'error');
     }
   };
 
@@ -173,6 +176,7 @@ export function AdminPanel() {
       });
     } catch (error) {
       console.error('Toggle sold failed', error);
+    showStatus('Erro ao alterar status.', 'error');
     }
   };
 
@@ -356,7 +360,7 @@ export function AdminPanel() {
             {isAdding ? 'Cancelar' : 'Novo Item'}
           </button>
           <button
-            onClick={() => setIsLoggedIn(false)}
+            onClick={() => { signOut(auth).catch(console.error); setIsLoggedIn(false); }}
             className="p-2.5 text-stone-400 hover:text-brand-start transition-colors"
           >
             <LogOut size={24} />
