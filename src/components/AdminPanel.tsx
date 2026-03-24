@@ -5,7 +5,7 @@ import { collection, addDoc, updateDoc, doc, deleteDoc, serverTimestamp, query, 
 import { LogOut, Plus, Trash2, Edit2, CheckCircle, XCircle, Save, AlertCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Item, CATEGORIES, Category, Settings } from '../types';
-import { cn } from '../utils';
+import { cn, fixDriveUrl } from '../utils';
 
 export function AdminPanel() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -35,15 +35,8 @@ export function AdminPanel() {
   const [additionalPhotoUrl, setAdditionalPhotoUrl] = useState('');
   const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
 
-  // Converte links do Google Drive para link direto de visualização
-  const convertDriveUrl = (url: string): string => {
-    const m1 = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/);
-    if (m1) return `https://lh3.googleusercontent.com/d/${m1[1]}`;
-    const m2 = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
-    if (m2) return `https://lh3.googleusercontent.com/d/${m2[1]}`;
-    // já é URL direta
-    return url;
-  };
+  // Usa o utilitário centralizado para converter URLs do Google Drive
+  const convertDriveUrl = fixDriveUrl;
 
   const addAdditionalPhoto = () => {
     if (!additionalPhotoUrl.trim()) return;
@@ -437,7 +430,7 @@ export function AdminPanel() {
       <div className="grid grid-cols-1 gap-4">
         {items.map(item => (
           <div key={item.id} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-stone-200 shadow-sm group">
-            <img src={item.mainPhoto} className="w-16 h-16 rounded-lg object-cover" referrerPolicy="no-referrer" alt={item.title} />
+            <img src={fixDriveUrl(item.mainPhoto)} className="w-16 h-16 rounded-lg object-cover" referrerPolicy="no-referrer" alt={item.title} />
             <div className="flex-1">
               <h4 className="font-semibold text-brand-gradient inline-block">{item.title}</h4>
               <p className="text-sm text-stone-500">{item.category} • {item.isSold ? 'Vendido' : 'Disponível'}</p>
