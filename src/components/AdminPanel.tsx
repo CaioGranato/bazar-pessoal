@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { auth, db, storage } from '../firebase';
+import { auth, db } from '../firebase';
 import { signInAnonymously, signOut } from 'firebase/auth';
 import { collection, addDoc, updateDoc, doc, deleteDoc, serverTimestamp, query, orderBy, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { LogIn, LogOut, Plus, Trash2, Edit2, CheckCircle, XCircle, Upload, Image as ImageIcon, Loader2, Save, ExternalLink, AlertCircle } from 'lucide-react';
+import { LogOut, Plus, Trash2, Edit2, CheckCircle, XCircle, Save, AlertCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Item, CATEGORIES, Category, Settings } from '../types';
 import { cn } from '../utils';
@@ -16,10 +15,13 @@ export function AdminPanel() {
   const [items, setItems] = useState<Item[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  
+
   // Settings state
-  const [settings, setSettings] = useState<Settings>({ siteTitle: 'Bazar Pessoal', siteSubtitle: 'Curadoria de Itens', contactUrl: '' });
+  const [settings, setSettings] = useState<Settings>({
+    siteTitle: 'Bazar Pessoal',
+    siteSubtitle: 'Curadoria de Itens',
+    contactUrl: ''
+  });
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -30,22 +32,20 @@ export function AdminPanel() {
   const [category, setCategory] = useState<Category>('Eletrônicos');
   const [price, setPrice] = useState('');
   const [mainPhoto, setMainPhoto] = useState('');
-  const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
   const [additionalPhotoUrl, setAdditionalPhotoUrl] = useState('');
+  const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const additionalFilesRef = useRef<HTMLInputElement>(null);
-
-  // Converte links do Google Drive para link direto
+  // Converte links do Google Drive para link direto de visualização
   const convertDriveUrl = (url: string): string => {
     const m1 = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/);
-    if (m1) return `https://drive.google.com/uc?export=view&id=${m1[1]}`;
+    if (m1) return `https://lh3.googleusercontent.com/d/${m1[1]}`;
     const m2 = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
-    if (m2) return `https://drive.google.com/uc?export=view&id=${m2[1]}`;
+    if (m2) return `https://lh3.googleusercontent.com/d/${m2[1]}`;
+    // já é URL direta
     return url;
   };
 
-  const addAdditionalPhotoUrl = () => {
+  const addAdditionalPhoto = () => {
     if (!additionalPhotoUrl.trim()) return;
     setAdditionalPhotos(prev => [...prev, convertDriveUrl(additionalPhotoUrl.trim())]);
     setAdditionalPhotoUrl('');
@@ -53,27 +53,17 @@ export function AdminPanel() {
 
   useEffect(() => {
     if (!isLoggedIn) return;
-    
-    // Fetch items
     const q = query(collection(db, 'items'), orderBy('createdAt', 'desc'));
-    const unsubscribeItems = onSnapshot(q, (snapshot) => {
-      setItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Item)));
+    const unsub = onSnapshot(q, snap => {
+      setItems(snap.docs.map(d => ({ id: d.id, ...d.data() } as Item)));
     });
-
-    // Fetch settings
     const fetchSettings = async () => {
-      const docRef = doc(db, 'settings', 'global');
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setSettings(docSnap.data() as Settings);
-      }
+      const snap = await getDoc(doc(db, 'settings', 'global'));
+      if (snap.exists()) setSettings(snap.data() as Settings);
     };
     fetchSettings();
-
-    return () => unsubscribeItems();
+    return () => unsub();
   }, [isLoggedIn]);
-
-  const isAdmin = isLoggedIn;
 
   const handleLogin = () => {
     if (loginUser === 'caiogranatoodmax' && loginPass === 'odmax2026') {
@@ -90,45 +80,12 @@ export function AdminPanel() {
     setTimeout(() => setStatusMsg(null), 3000);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isMain: boolean) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setIsUploading(true);
-    try {
-      const uploadedUrls: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const storageRef = ref(storage, `items/${Date.now()}_${file.name}`);
-        const snapshot = await uploadBytes(storageRef, file);
-        const url = await getDownloadURL(snapshot.ref);
-        uploadedUrls.push(url);
-      }
-
-      if (isMain) {
-        setMainPhoto(uploadedUrls[0]);
-        showStatus('Foto principal carregada!');
-      } else {
-        setAdditionalPhotos(prev => [...prev, ...uploadedUrls]);
-        showStatus(`${uploadedUrls.length} foto(s) adicionada(s)!`);
-      }
-    } catch (error) {
-      console.error('Upload failed', error);
-      showStatus('Falha no upload da imagem.', 'error');
-    } finally {
-      setIsUploading(false);
-      if (e.target) e.target.value = '';
-    }
-  };
-
   const handleSaveSettings = async () => {
-    if (!isAdmin) return;
     setIsSavingSettings(true);
     try {
       await setDoc(doc(db, 'settings', 'global'), settings);
       showStatus('Configurações salvas!');
-    } catch (error) {
-      console.error('Save settings failed', error);
+    } catch (e) {
       showStatus('Erro ao salvar configurações.', 'error');
     } finally {
       setIsSavingSettings(false);
@@ -137,57 +94,50 @@ export function AdminPanel() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAdmin) return;
-
     const itemData = {
       title,
       description,
       category,
       price: price ? parseFloat(price) : null,
-      mainPhoto,
+      mainPhoto: convertDriveUrl(mainPhoto),
       additionalPhotos,
-      isSold: editingItem ? editingItem.isSold : false,
       updatedAt: serverTimestamp(),
     };
-
     try {
       if (editingItem) {
         await updateDoc(doc(db, 'items', editingItem.id), itemData);
+        showStatus('Item atualizado!');
       } else {
         await addDoc(collection(db, 'items'), {
           ...itemData,
           isSold: false,
           createdAt: serverTimestamp(),
         });
+        showStatus('Item publicado!');
       }
       resetForm();
-    } catch (error) {
-      console.error('Save failed', error);
-    showStatus('Erro ao salvar item.', 'error');
+    } catch (e) {
+      showStatus('Erro ao salvar item.', 'error');
     }
   };
 
   const toggleSold = async (item: Item) => {
-    if (!isAdmin) return;
     try {
       await updateDoc(doc(db, 'items', item.id), {
         isSold: !item.isSold,
         updatedAt: serverTimestamp(),
       });
-    } catch (error) {
-      console.error('Toggle sold failed', error);
-    showStatus('Erro ao alterar status.', 'error');
+    } catch (e) {
+      showStatus('Erro ao alterar status.', 'error');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!isAdmin) return;
     try {
       await deleteDoc(doc(db, 'items', id));
       showStatus('Item excluído!');
       setShowDeleteConfirm(null);
-    } catch (error) {
-      console.error('Delete failed', error);
+    } catch (e) {
       showStatus('Erro ao excluir item.', 'error');
     }
   };
@@ -211,6 +161,7 @@ export function AdminPanel() {
     setPrice('');
     setMainPhoto('');
     setAdditionalPhotos([]);
+    setAdditionalPhotoUrl('');
     setIsAdding(false);
   };
 
@@ -226,8 +177,8 @@ export function AdminPanel() {
               <input
                 type="text"
                 value={loginUser}
-                onChange={(e) => setLoginUser(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
+                onChange={e => setLoginUser(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleLogin(); }}
                 className="mt-1 w-full px-4 py-2 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none text-sm"
                 autoComplete="username"
               />
@@ -237,8 +188,8 @@ export function AdminPanel() {
               <input
                 type="password"
                 value={loginPass}
-                onChange={(e) => setLoginPass(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
+                onChange={e => setLoginPass(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleLogin(); }}
                 className="mt-1 w-full px-4 py-2 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none text-sm"
                 autoComplete="current-password"
               />
@@ -276,7 +227,7 @@ export function AdminPanel() {
         )}
       </AnimatePresence>
 
-      {/* Delete Confirmation Modal */}
+      {/* Modal de confirmação de exclusão */}
       <AnimatePresence>
         {showDeleteConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-end/40 backdrop-blur-sm">
@@ -306,7 +257,7 @@ export function AdminPanel() {
         )}
       </AnimatePresence>
 
-      {/* Site Settings Section */}
+      {/* Configurações do Site */}
       <section className="bg-white p-8 rounded-3xl border border-stone-200 shadow-sm space-y-6">
         <div className="flex justify-between items-center">
           <h3 className="text-xl font-bold text-brand-gradient inline-block">Configurações do Site</h3>
@@ -316,39 +267,40 @@ export function AdminPanel() {
             className="flex items-center gap-2 bg-brand-gradient text-white px-5 py-2 rounded-full hover:opacity-90 transition-opacity font-medium disabled:opacity-50"
           >
             {isSavingSettings ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-            Salvar Configurações
+            Salvar
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-sm font-bold uppercase tracking-wider text-stone-500">Título Principal</label>
+            <label className="text-sm font-bold uppercase tracking-wider text-stone-500">Título</label>
             <input
               value={settings.siteTitle}
-              onChange={(e) => setSettings({ ...settings, siteTitle: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none transition-all"
+              onChange={e => setSettings({ ...settings, siteTitle: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none"
             />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-bold uppercase tracking-wider text-stone-500">Subtítulo</label>
             <input
               value={settings.siteSubtitle}
-              onChange={(e) => setSettings({ ...settings, siteSubtitle: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none transition-all"
+              onChange={e => setSettings({ ...settings, siteSubtitle: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none"
             />
           </div>
         </div>
         <div className="space-y-2">
           <label className="text-sm font-bold uppercase tracking-wider text-stone-500">URL de Contato</label>
-          <p className="text-xs text-stone-400">Esta URL será usada no botão "Entrar em contato" de cada item e no link de Contato do rodapé.</p>
+          <p className="text-xs text-stone-400">WhatsApp (https://wa.me/55119...) ou e-mail (mailto:seu@email.com)</p>
           <input
             value={settings.contactUrl}
-            onChange={(e) => setSettings({ ...settings, contactUrl: e.target.value })}
-            className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none transition-all"
-            placeholder="https://wa.me/55119... ou mailto:seu@email.com"
+            onChange={e => setSettings({ ...settings, contactUrl: e.target.value })}
+            className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none"
+            placeholder="https://wa.me/5511999999999"
           />
         </div>
       </section>
 
+      {/* Cabeçalho de itens */}
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold text-brand-gradient inline-block">Gerenciar Itens</h2>
         <div className="flex gap-3">
@@ -362,12 +314,14 @@ export function AdminPanel() {
           <button
             onClick={() => { signOut(auth).catch(console.error); setIsLoggedIn(false); }}
             className="p-2.5 text-stone-400 hover:text-brand-start transition-colors"
+            title="Sair"
           >
             <LogOut size={24} />
           </button>
         </div>
       </div>
 
+      {/* Formulário */}
       {isAdding && (
         <form onSubmit={handleSave} className="bg-white p-8 rounded-3xl border border-stone-200 shadow-sm space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -376,8 +330,8 @@ export function AdminPanel() {
               <input
                 required
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none transition-all"
+                onChange={e => setTitle(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none"
                 placeholder="Ex: Câmera Canon EOS R5"
               />
             </div>
@@ -385,52 +339,36 @@ export function AdminPanel() {
               <label className="text-sm font-bold uppercase tracking-wider text-stone-500">Categoria</label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value as Category)}
-                className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none transition-all"
+                onChange={e => setCategory(e.target.value as Category)}
+                className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none"
               >
                 {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold uppercase tracking-wider text-stone-500">Preço (Opcional)</label>
-              <div className="flex items-center border border-stone-200 rounded-xl focus-within:ring-2 focus-within:ring-brand-start transition-all overflow-hidden">
-                <span className="px-3 py-3 bg-stone-50 text-stone-500 font-bold border-r border-stone-200 select-none">R$</span>
+              <label className="text-sm font-bold uppercase tracking-wider text-stone-500">Preço (opcional)</label>
+              <div className="flex items-center border border-stone-200 rounded-xl focus-within:ring-2 focus-within:ring-brand-start overflow-hidden">
+                <span className="px-3 py-3 bg-stone-50 text-stone-500 font-bold border-r border-stone-200">R$</span>
                 <input
                   type="number"
                   step="0.01"
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={e => setPrice(e.target.value)}
                   className="flex-1 px-4 py-3 outline-none bg-white"
                   placeholder="0,00"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold uppercase tracking-wider text-stone-500">Foto Principal</label>
-              <div className="flex gap-2">
-                <input
-                  required
-                  value={mainPhoto}
-                  onChange={(e) => setMainPhoto(convertDriveUrl(e.target.value))}
-                  className="flex-1 px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none transition-all"
-                  placeholder="URL ou link do Google Drive"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
-                  className="p-3 bg-stone-100 rounded-xl hover:bg-stone-200 transition-colors disabled:opacity-50"
-                >
-                  {isUploading ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
-                </button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept="image/*"
-                  onChange={(e) => handleFileUpload(e, true)}
-                />
-              </div>
+              <label className="text-sm font-bold uppercase tracking-wider text-stone-500">Foto Principal (URL)</label>
+              <input
+                required
+                value={mainPhoto}
+                onChange={e => setMainPhoto(e.target.value)}
+                onBlur={e => setMainPhoto(convertDriveUrl(e.target.value))}
+                className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none"
+                placeholder="Cole o link público do Google Drive"
+              />
             </div>
           </div>
 
@@ -440,57 +378,43 @@ export function AdminPanel() {
               required
               rows={4}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none transition-all"
+              onChange={e => setDescription(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none"
               placeholder="Descreva o estado do item, acessórios inclusos, etc."
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-bold uppercase tracking-wider text-stone-500">Fotos Adicionais</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              {additionalPhotos.map((url, idx) => (
-                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group">
-                  <img src={url} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  <button
-                    type="button"
-                    onClick={() => setAdditionalPhotos(prev => prev.filter((_, i) => i !== idx))}
-                    className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <XCircle size={16} />
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => additionalFilesRef.current?.click()}
-                disabled={isUploading}
-                className="aspect-square border-2 border-dashed border-stone-200 rounded-xl flex flex-col items-center justify-center text-stone-400 hover:border-brand-start hover:text-brand-start transition-all"
-              >
-                {isUploading ? <Loader2 className="animate-spin" size={24} /> : <ImageIcon size={24} />}
-                <span className="text-xs font-bold mt-2">Adicionar</span>
-              </button>
-              <input
-                type="file"
-                ref={additionalFilesRef}
-                className="hidden"
-                multiple
-                accept="image/*"
-                onChange={(e) => handleFileUpload(e, false)}
-              />
-            </div>
-            <div className="flex gap-2 mt-1">
+          {/* Fotos adicionais via URL */}
+          <div className="space-y-3">
+            <label className="text-sm font-bold uppercase tracking-wider text-stone-500">Fotos Adicionais (URLs)</label>
+            {additionalPhotos.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {additionalPhotos.map((url, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group">
+                    <img src={url} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="" />
+                    <button
+                      type="button"
+                      onClick={() => setAdditionalPhotos(prev => prev.filter((_, i) => i !== idx))}
+                      className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <XCircle size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
               <input
                 type="text"
                 value={additionalPhotoUrl}
-                onChange={(e) => setAdditionalPhotoUrl(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addAdditionalPhotoUrl(); } }}
-                placeholder="Adicionar foto via URL ou link do Google Drive..."
-                className="flex-1 px-4 py-2 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none transition-all text-sm"
+                onChange={e => setAdditionalPhotoUrl(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAdditionalPhoto(); } }}
+                placeholder="Cole o link público do Google Drive e pressione Enter..."
+                className="flex-1 px-4 py-2 rounded-xl border border-stone-200 focus:ring-2 focus:ring-brand-start outline-none text-sm"
               />
               <button
                 type="button"
-                onClick={addAdditionalPhotoUrl}
+                onClick={addAdditionalPhoto}
                 className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 text-sm font-medium transition-colors whitespace-nowrap"
               >
                 + Adicionar
@@ -499,27 +423,21 @@ export function AdminPanel() {
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={resetForm}
-              className="px-6 py-3 rounded-full text-stone-500 hover:bg-stone-50 transition-colors font-medium"
-            >
+            <button type="button" onClick={resetForm} className="px-6 py-3 rounded-full text-stone-500 hover:bg-stone-50 transition-colors font-medium">
               Cancelar
             </button>
-            <button
-              type="submit"
-              className="px-8 py-3 rounded-full bg-brand-gradient text-white hover:opacity-90 transition-opacity font-medium"
-            >
+            <button type="submit" className="px-8 py-3 rounded-full bg-brand-gradient text-white hover:opacity-90 transition-opacity font-medium">
               {editingItem ? 'Salvar Alterações' : 'Publicar Anúncio'}
             </button>
           </div>
         </form>
       )}
 
+      {/* Lista de itens */}
       <div className="grid grid-cols-1 gap-4">
         {items.map(item => (
           <div key={item.id} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-stone-200 shadow-sm group">
-            <img src={item.mainPhoto} className="w-16 h-16 rounded-lg object-cover" referrerPolicy="no-referrer" />
+            <img src={item.mainPhoto} className="w-16 h-16 rounded-lg object-cover" referrerPolicy="no-referrer" alt={item.title} />
             <div className="flex-1">
               <h4 className="font-semibold text-brand-gradient inline-block">{item.title}</h4>
               <p className="text-sm text-stone-500">{item.category} • {item.isSold ? 'Vendido' : 'Disponível'}</p>
@@ -527,26 +445,15 @@ export function AdminPanel() {
             <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 onClick={() => toggleSold(item)}
-                className={cn(
-                  "p-2 rounded-lg transition-colors",
-                  item.isSold ? "text-green-600 hover:bg-green-50" : "text-stone-400 hover:bg-stone-50"
-                )}
-                title={item.isSold ? "Marcar como Disponível" : "Marcar como Vendido"}
+                className={cn("p-2 rounded-lg transition-colors", item.isSold ? "text-green-600 hover:bg-green-50" : "text-stone-400 hover:bg-stone-50")}
+                title={item.isSold ? 'Marcar como Disponível' : 'Marcar como Vendido'}
               >
                 <CheckCircle size={20} />
               </button>
-              <button
-                onClick={() => startEdit(item)}
-                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                title="Editar"
-              >
+              <button onClick={() => startEdit(item)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
                 <Edit2 size={20} />
               </button>
-              <button
-                onClick={() => setShowDeleteConfirm(item.id)}
-                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="Excluir"
-              >
+              <button onClick={() => setShowDeleteConfirm(item.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Excluir">
                 <Trash2 size={20} />
               </button>
             </div>
