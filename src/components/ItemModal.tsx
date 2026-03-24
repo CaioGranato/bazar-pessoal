@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Item } from '../types';
+import { fixDriveUrl } from '../utils';
 
 interface ItemModalProps {
   item: Item | null;
@@ -14,7 +15,8 @@ export function ItemModal({ item, onClose, contactUrl }: ItemModalProps) {
 
   if (!item) return null;
 
-  const allPhotos = [item.mainPhoto, ...(item.additionalPhotos || [])];
+  // Converte todos os URLs para o formato público do Google Drive
+  const allPhotos = [item.mainPhoto, ...(item.additionalPhotos || [])].map(fixDriveUrl);
 
   return (
     <AnimatePresence>
@@ -32,7 +34,7 @@ export function ItemModal({ item, onClose, contactUrl }: ItemModalProps) {
           className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col md:flex-row"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Photo Section */}
+          {/* Seção de Fotos */}
           <div className="w-full md:w-1/2 bg-stone-100 relative flex flex-col">
             <div className="flex-1 relative overflow-hidden group">
               <img
@@ -41,8 +43,6 @@ export function ItemModal({ item, onClose, contactUrl }: ItemModalProps) {
                 className="w-full h-full object-contain"
                 referrerPolicy="no-referrer"
               />
-
-              {/* VENDIDO stamp overlay on photo */}
               {item.isSold && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="border-4 border-red-600 text-red-600 font-black text-4xl px-6 py-3 rotate-[-45deg] uppercase tracking-widest bg-white/80 backdrop-blur-sm rounded-lg shadow-lg">
@@ -50,7 +50,6 @@ export function ItemModal({ item, onClose, contactUrl }: ItemModalProps) {
                   </div>
                 </div>
               )}
-
               {allPhotos.length > 1 && (
                 <>
                   <button
@@ -68,7 +67,6 @@ export function ItemModal({ item, onClose, contactUrl }: ItemModalProps) {
                 </>
               )}
             </div>
-
             {allPhotos.length > 1 && (
               <div className="p-4 flex gap-2 overflow-x-auto bg-stone-50 border-t border-stone-200">
                 {allPhotos.map((photo, idx) => (
@@ -86,7 +84,7 @@ export function ItemModal({ item, onClose, contactUrl }: ItemModalProps) {
             )}
           </div>
 
-          {/* Info Section */}
+          {/* Seção de Informações */}
           <div className="w-full md:w-1/2 p-6 md:p-10 flex flex-col overflow-y-auto">
             <div className="flex justify-between items-start mb-6">
               <div>
@@ -102,10 +100,7 @@ export function ItemModal({ item, onClose, contactUrl }: ItemModalProps) {
                   </p>
                 )}
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-stone-100 rounded-full transition-colors"
-              >
+              <button onClick={onClose} className="p-2 hover:bg-stone-100 rounded-full transition-colors">
                 <X size={24} />
               </button>
             </div>
