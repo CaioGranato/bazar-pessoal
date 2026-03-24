@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { Item } from '../types';
-import { cn } from '../utils';
+import { cn, fixDriveUrl } from '../utils';
 
 interface ItemCardProps {
   item: Item;
@@ -9,6 +9,8 @@ interface ItemCardProps {
 }
 
 export function ItemCard({ item, onClick }: ItemCardProps) {
+  const photo = fixDriveUrl(item.mainPhoto);
+
   return (
     <motion.div
       layout
@@ -20,7 +22,7 @@ export function ItemCard({ item, onClick }: ItemCardProps) {
     >
       <div className="aspect-square relative overflow-hidden bg-stone-100">
         <img
-          src={item.mainPhoto}
+          src={photo}
           alt={item.title}
           className={cn(
             "w-full h-full object-cover transition-transform duration-500 group-hover:scale-105",
@@ -28,7 +30,6 @@ export function ItemCard({ item, onClick }: ItemCardProps) {
           )}
           referrerPolicy="no-referrer"
         />
-        
         {item.isSold && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="border-4 border-red-600 text-red-600 font-black text-3xl px-4 py-2 rotate-[-45deg] uppercase tracking-widest bg-white/80 backdrop-blur-sm rounded-lg shadow-lg">
@@ -37,7 +38,6 @@ export function ItemCard({ item, onClick }: ItemCardProps) {
           </div>
         )}
       </div>
-
       <div className="p-4">
         <h3 className="font-semibold text-brand-gradient inline-block line-clamp-1 group-hover:opacity-80 transition-opacity">
           {item.title}
@@ -48,8 +48,7 @@ export function ItemCard({ item, onClick }: ItemCardProps) {
           </p>
         )}
         <button className="mt-3 text-xs font-bold uppercase tracking-wider text-stone-400 group-hover:text-brand-start transition-colors flex items-center gap-1">
-          Clique para ver mais
-          <span className="text-lg">→</span>
+          Clique para ver mais <span className="text-lg">→</span>
         </button>
       </div>
     </motion.div>
